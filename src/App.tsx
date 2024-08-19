@@ -5,6 +5,9 @@ let book: Book;
 interface StateConstructor {
   rendition: Rendition | undefined;
   pageNumber: number | undefined;
+  touchStart: number;
+  touchEnd: number;
+  width: number;
 }
 export class App extends React.Component<any, StateConstructor> {
   constructor(props: any) {
@@ -12,14 +15,44 @@ export class App extends React.Component<any, StateConstructor> {
     this.state = {
       rendition: undefined,
       pageNumber: undefined,
+      touchStart: 0,
+      touchEnd: 0,
+      width: window.innerWidth,
     };
+  }
+
+  handleTouchStart(e) {
+    this.setState({
+      touchStart: e.targetTouches[0].clientX,
+    });
+  }
+
+  handleTouchMove(e) {
+    this.setState({
+      touchEnd: e.targetTouches[0].clientX,
+    });
+  }
+
+  handleTouchEnd() {
+    if (this.state.touchStart - this.state.touchEnd > 150) {
+      // do your stuff here for left swipe
+      // moveSliderRight();
+      console.log("right");
+      this.clickHandle(false);
+    }
+
+    if (this.state.touchStart - this.state.touchEnd < -150) {
+      // do your stuff here for right swipe
+      console.log("left");
+      this.clickHandle(true);
+    }
   }
 
   loadBook = (arrayBuffer: any) => {
     book = ePub(arrayBuffer);
 
     let rend = book.renderTo("viewer", {
-      width: "600px",
+      width: this.state.width,
       height: "100%",
     });
     rend.hooks.render.register(this.transformer);
@@ -116,7 +149,19 @@ export class App extends React.Component<any, StateConstructor> {
             onChange={(e) => this.onChangeFunction(e)}
           />
         </div>
-
+        <div
+          style={{
+            position: "absolute",
+            width: "100%",
+            height: "100%",
+            top: "200px",
+          }}
+          onTouchStart={(touchStartEvent) =>
+            this.handleTouchStart(touchStartEvent)
+          }
+          onTouchMove={(touchMoveEvent) => this.handleTouchMove(touchMoveEvent)}
+          onTouchEnd={() => this.handleTouchEnd()}
+        ></div>
         <div
           id="viewer"
           style={{ width: "100%", height: "600px", border: "1px solid #ccc" }}
@@ -127,14 +172,7 @@ export class App extends React.Component<any, StateConstructor> {
             justifyContent: "space-between",
             display: "flex",
           }}
-        >
-          <button id="prev" onClick={() => this.clickHandle(true)}>
-            Previous
-          </button>
-          <button id="next" onClick={() => this.clickHandle(false)}>
-            Next
-          </button>
-        </div>
+        ></div>
       </div>
     );
   }
