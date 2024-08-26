@@ -1,5 +1,6 @@
 import ePub, { Book, Rendition } from "epubjs";
 import React from "react";
+import "./App.css";
 
 let book: Book;
 interface StateConstructor {
@@ -8,6 +9,7 @@ interface StateConstructor {
   touchStart: number;
   touchEnd: number;
   width: number;
+  isLoaded: boolean;
 }
 export class App extends React.Component<any, StateConstructor> {
   constructor(props: any) {
@@ -18,32 +20,31 @@ export class App extends React.Component<any, StateConstructor> {
       touchStart: 0,
       touchEnd: 0,
       width: window.innerWidth,
+      isLoaded: false,
     };
   }
 
-  handleTouchStart(e) {
+  handleTouchStart(e: any) {
     this.setState({
       touchStart: e.targetTouches[0].clientX,
     });
   }
 
-  handleTouchMove(e) {
+  handleTouchMove(e: any) {
     this.setState({
       touchEnd: e.targetTouches[0].clientX,
     });
   }
 
   handleTouchEnd() {
-    if (this.state.touchStart - this.state.touchEnd > 150) {
+    if (this.state.touchStart - this.state.touchEnd > 0) {
       // do your stuff here for left swipe
       // moveSliderRight();
-      console.log("right");
       this.clickHandle(false);
     }
 
-    if (this.state.touchStart - this.state.touchEnd < -150) {
+    if (this.state.touchStart - this.state.touchEnd < 0) {
       // do your stuff here for right swipe
-      console.log("left");
       this.clickHandle(true);
     }
   }
@@ -59,6 +60,34 @@ export class App extends React.Component<any, StateConstructor> {
     rend.display();
     this.setState({
       rendition: rend,
+      isLoaded: true,
+    });
+
+    rend.on("rendered", (_: Rendition, iframe: Window) => {
+      iframe.document.documentElement.addEventListener(
+        "touchstart",
+        (event: any) => {
+          this.handleTouchStart(event);
+        }
+      );
+
+      iframe.document.documentElement.addEventListener(
+        "touchmove",
+        (event: any) => {
+          this.handleTouchMove(event);
+        }
+      );
+
+      iframe.document.documentElement.addEventListener(
+        "touchend",
+        (event: any) => {
+          event.preventDefault();
+          this.handleTouchEnd();
+        }
+      );
+      this.setState({
+        pageNumber: rend.currentLocation()?.start?.index,
+      });
     });
   };
 
@@ -141,38 +170,44 @@ export class App extends React.Component<any, StateConstructor> {
           height: "100%",
         }}
       >
-        <div style={{ padding: "10px" }}>
-          <input
-            type="file"
-            id="file-input"
-            accept=".epub"
-            onChange={(e) => this.onChangeFunction(e)}
-          />
-        </div>
-        <div
-          style={{
-            position: "absolute",
-            width: "100%",
-            height: "100%",
-            top: "200px",
-          }}
-          onTouchStart={(touchStartEvent) =>
-            this.handleTouchStart(touchStartEvent)
-          }
-          onTouchMove={(touchMoveEvent) => this.handleTouchMove(touchMoveEvent)}
-          onTouchEnd={() => this.handleTouchEnd()}
-        ></div>
-        <div
-          id="viewer"
-          style={{ width: "100%", height: "600px", border: "1px solid #ccc" }}
-        ></div>
-        <div
-          style={{
-            width: "100%",
-            justifyContent: "space-between",
-            display: "flex",
-          }}
-        ></div>
+        {!this.state.isLoaded && (
+          <div style={{ padding: "10px" }}>
+            <label htmlFor="file-input" className="custom-file-upload">
+              Custom Upload
+            </label>
+            <input
+              type="file"
+              id="file-input"
+              accept=".epub"
+              onChange={(e) => this.onChangeFunction(e)}
+            />
+          </div>
+        )}
+
+        {this.state.isLoaded && (
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              width: "-webkit-fill-available",
+              padding: "10px",
+            }}
+          >
+            <div>{this.state.rendition?.book?.packaging?.metadata.title}</div>
+            <div>{this.state.pageNumber}</div>
+          </div>
+        )}
+        {this.state.isLoaded && (
+          <div
+            id="viewer"
+            style={{
+              width: "100%",
+              height: "100%",
+            }}
+            onClick={(touchMoveEvent) => this.handleTouchMove(touchMoveEvent)}
+          ></div>
+        )}
       </div>
     );
   }
