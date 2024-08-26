@@ -85,8 +85,9 @@ export class App extends React.Component<any, StateConstructor> {
           this.handleTouchEnd();
         }
       );
+      const currentLocation: any = rend.currentLocation();
       this.setState({
-        pageNumber: rend.currentLocation()?.start?.index,
+        pageNumber: currentLocation?.start?.index,
       });
     });
   };
